@@ -21,7 +21,7 @@ shared transport layer.
 ```mermaid
 flowchart TD
     T1[raid_check.timer<br/><i>daily, before backups</i>] --> R[raid_check<br/><i>inspect mdadm state</i>]
-    R -->|degraded| S[/opt/RAID_WARNING<br/><i>sentinel file</i>]
+    R -->|degraded| S["/opt/RAID_WARNING<br/><i>sentinel file</i>"]
     R -->|degraded| D1[systemctl disable<br/><i>daily + weekly timers</i>]
     R -->|recovered| D2[systemctl enable<br/><i>daily + weekly timers</i>]
     R -->|either| N[ntfy / discord_notify<br/><i>notification layer</i>]
