@@ -1,0 +1,12 @@
+[Unit]
+Description=Runs backup.service daily at 11 pm
+
+[Timer]
+OnCalendar=*-*-* 23:00:00
+Persistent=true
+AccuracySec=1min               # optional: allow 1‑min jitter
+RandomizedDelaySec=5m          # optional: spread start within ±5 min
+
+
+[Install]
+WantedBy=timers.target

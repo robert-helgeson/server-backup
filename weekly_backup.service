@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/weekly_backup
+

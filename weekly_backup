@@ -1,0 +1,38 @@
+#!/bin/bash
+
+log_dir='/var/log/update_logs'
+
+main() {
+    gitlab_backup > $log_dir/gitlab_backup
+    docker_update > $log_dir/docker_update
+    update_system > $log_dir/system_update
+    docker_prune > $log_dir/docker_prune
+    notify_via_discord 
+}
+
+gitlab_backup() {
+    docker exec -t gitlab gitlab-backup
+    docker exec -t gitlab /bin/sh -c 'gitlab-ctl backup-etc && cd /etc/gitlab/config_backup && cp $(ls -t | head -n1) /var/opt/gitlab/backups/'
+}
+
+docker_update() {
+    for i in $(ls /opt/storage/docker); do
+        docker compose -f /opt/storage/docker/$i/docker-compose.yml pull
+        docker compose -f /opt/storage/docker/$i/docker-compose.yml down
+        docker compose -f /opt/storage/docker/$i/docker-compose.yml up -d
+    done
+}
+
+docker_prune() {
+    docker system prune -f
+}
+
+update_system() {
+    dnf update -y
+}
+
+notify_via_discord() {
+    ntfy "a weekly backup was completed"
+}
+
+main

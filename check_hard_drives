@@ -1,0 +1,27 @@
+#!/bin/bash
+
+MOUNT_POINTS=(
+    "/opt/storage"
+    "/opt/backup"
+)
+
+TIMER_NAME="check_hard_drives.timer"
+
+for MOUNT_POINT in "${MOUNT_POINTS[@]}"; do
+    if ! mountpoint -q "$MOUNT_POINT"; then
+        echo "Hard drive $MOUNT_POINT is disconnected. Attempting to disable timer..."
+        
+        systemctl disable $TIMER_NAME
+        DISABLE_STATUS=$?
+        
+        systemctl stop $TIMER_NAME
+        STOP_STATUS=$?
+        
+        if [ $DISABLE_STATUS -eq 0 ] && [ $STOP_STATUS -eq 0 ]; then
+            echo "Timer disabled successfully. Shutting down..."
+            /sbin/shutdown -h now
+        else
+            echo "Failed to disable timer. Not shutting down."
+        fi
+    fi
+done

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# if you want to run this as a test, set this enabled and the output will tell you if things are passing passively
+raid_check_test=false
+
+
+TMP=/tmp/raid_check
+: > "$TMP"                       
+raid_broken_at_start=false
+
+
+if [[ -f /opt/RAID_WARNING ]]; then
+   raid_broken_at_start=true 
+fi
+
+
+awk '/^md/ {print "/dev/" $1}' /proc/mdstat |
+while read -r md; do
+    if mdadm --detail "$md" | grep -Eq 'State .*degraded|State .*resyncing|State .*recover'; then
+        {
+            echo "### $md needs attention"
+            mdadm --detail "$md" | grep -E 'State|Active Devices|Failed Devices'
+            echo
+        } >> "$TMP"
+    fi
+done
+
+
+if [[ -s "$TMP" ]]; then  
+    msg=$(sed ':a;N;$!ba;s/\n/\\n/g' "$TMP")
+    systemctl disable --now daily_backup.timer
+    systemctl disable --now weekly_backup.timer
+    touch /opt/RAID_WARNING
+    /usr/local/bin/ntfy "$msg"              
+    /usr/local/bin/ntfy "daily and weekly backups are disabled until issue is resolved."
+else
+    if $raid_broken_at_start; then
+        rm /opt/RAID_WARNING
+        systemctl enable daily_backup.timer
+        systemctl enable weekly_backup.timer
+        echo "daily and weekly backups are enabled once more"
+    else
+	if $raid_check_test; then
+	    /usr/local/bin/ntfy "raid check passed with flying colors"
+	fi
+    fi
+fi

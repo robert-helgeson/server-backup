@@ -1,0 +1,10 @@
+[Unit]
+Description=Run check_hard_drives service every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=check_hard_drives.service
+
+[Install]
+WantedBy=timers.target

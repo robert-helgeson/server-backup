@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+# ---------- 1) Slurp the message ----------
+if [[ $# -gt 0 ]]; then          # any arguments → use them
+    raw_msg="$*"
+else                              # otherwise read stdin
+    raw_msg="$(cat)"
+fi
+
+# ---------- 2) Escape real newlines ----------
+json_msg="${raw_msg//$'\n'/\\n}"
+
+# ---------- 3) Ship it ----------
+discord_notify homelab_server "$json_msg"
+
+

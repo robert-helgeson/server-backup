@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# backup vars
+config_files='/etc/samba/smb.conf /etc/snmp/snmpd.conf /etc/rsyslog.conf'
+scripts='/usr/local/bin/'
+services='/etc/systemd/system'
+log_dir='/var/log/update_logs'
+
+# photo backup vars
+SOURCE_DIR="/opt/storage/data/nextcloud/data/data/admin/files/Photos"
+TARGET_DIR="/opt/backup/photos/admin"
+
+
+main() {
+    config_backup	2>&1 | tee -a "$log_dir/backup_log"
+    rsyslog_backup 	2>&1 | tee -a "$log_dir/backup_log"
+    script_backup 	2>&1 | tee -a "$log_dir/backup_log"
+    service_backup 	2>&1 | tee -a "$log_dir/backup_log"
+    docker_backup 	2>&1 | tee -a "$log_dir/backup_log"
+    photo_backup 	2>&1 | tee -a "$log_dir/backup_log"
+    smb_backup 		2>&1 | tee -a "$log_dir/backup_log"
+    notify_via_discord 2>&1 | tee -a "$log_dir/backup_log"
+    check_restart
+}
+
+
+config_backup() {
+    for i in $config_files; do
+        rsync -aAXv --delete "$i" /opt/backup/configs/
+    done
+}
+
+
+rsyslog_backup() {
+    rsync -aAXv --delete /etc/rsyslog.d /opt/backup
+}
+
+
+script_backup() {
+    for i in $scripts/*; do
+        rsync -aAXv --delete "$i" /opt/backup/scripts/
+    done
+}
+
+
+service_backup() {
+    for i in $services/*; do
+        rsync -av --delete "$i" /opt/backup/services 
+    done
+}
+
+
+docker_backup() {
+    for i in $(ls /opt/storage/docker); do 
+        docker compose -f /opt/storage/docker/$i/docker-compose.yml down
+	rsync -aAXv --delete /opt/storage/docker/$i /opt/backup/docker
+        docker compose -f /opt/storage/docker/$i/docker-compose.yml up -d
+    done
+}
+
+
+photo_backup() {
+    rsync -aAXv --delete "$SOURCE_DIR/" "$TARGET_DIR/"
+}
+
+
+smb_backup() {
+    rsync -aAXv --delete /opt/storage/smb /opt/backup/
+}
+
+
+notify_via_discord() {
+    /usr/local/bin/discord_notify homelab_server "A daily backup was completed."
+}
+
+
+check_restart() {
+    if ! dnf needs-restarting -r &> /dev/null; then
+        /usr/local/bin/ntfy "homelab-server is requesting a reboot."
+    fi
+}
+
+
+main 

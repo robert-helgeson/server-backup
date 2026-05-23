@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# discord_notify - post a message to a named Discord webhook.
+#
+# Webhook URLs are read from /etc/discord_notify.env, which must define
+# a bash variable per channel in the form <name>_url. Example:
+#
+#     # /etc/discord_notify.env  (chmod 600, owned by root)
+#     homelab_server_url='https://discord.com/api/webhooks/.../...'
+#     schedule_bot_url='https://discord.com/api/webhooks/.../...'
+#
+# Usage: discord_notify <channel> <message>
+
+set -euo pipefail
+
+ENV_FILE="/etc/discord_notify.env"
+
+display_help() {
+    echo "Usage: discord_notify <channel> <message>"
+    echo
+    echo "Channels are defined by *_url variables in $ENV_FILE."
+}
+
+if [[ $# -lt 1 || "$1" == "help" || "$1" == "-h" || "$1" == "--help" ]]; then
+    display_help
+    exit 0
+fi
+
+if [[ ! -r "$ENV_FILE" ]]; then
+    echo "error: cannot read $ENV_FILE" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+channel="$1"
+message="${2:-}"
+url_var="${channel}_url"
+url="${!url_var:-}"
+
+if [[ -z "$url" ]]; then
+    echo "error: no webhook configured for channel '$channel'" >&2
+    echo "       expected variable ${url_var} in $ENV_FILE" >&2
+    exit 1
+fi
+
+curl -sS -H "Content-Type: application/json" \
+     -X POST \
+     -d "{\"content\":\"${message}\"}" \
+     "$url"

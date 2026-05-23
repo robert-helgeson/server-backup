@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [ -f /var/run/reboot-required ]; then
+    ntfy "Server needs a reboot."
+fi

@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/raid_check

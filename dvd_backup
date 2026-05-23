@@ -1,0 +1,106 @@
+#!/bin/bash
+
+docker_location="/opt/storage/docker"
+backup_location="/opt/storage/smb/common/linux/dvd_backup"
+config_files="/etc/samba/smb.conf /etc/snmp/snmpd.conf"
+scripts="/usr/local/bin/"
+services="/etc/systemd/system"
+backup_date="$(date +"%d-%m-%Y")"
+tar_file="/opt/storage/smb/common/linux/dvd_backup_$backup_date.tar"
+
+main() {
+    create_backup_directory
+    copy_docker_files 
+    copy_special_docker_files
+    config_backup
+    script_backup
+    service_backup
+    create_tar_file
+    clear
+    echo "finished! dont forget to encrypt this bad boy :)"
+}
+
+create_backup_directory() {
+    mkdir -p "$backup_location"
+}
+
+copy_docker_files() {
+    clear
+    echo "copying docker files..."
+    for dir in "$docker_location"/*; do 
+        [ -d "$dir" ] || continue
+        dir_name=$(basename "$dir")
+        mkdir -p "$backup_location/docker/$dir_name"
+
+        if [ -f "$dir/docker-compose.yml" ]; then
+            cp "$dir/docker-compose.yml" "$backup_location/docker/$dir_name/"
+        fi
+
+        if compgen -G "$dir/"*.env > /dev/null; then
+            cp "$dir/"*.env "$backup_location/docker/$dir_name/"
+        fi
+    done
+}
+
+copy_special_docker_files() {
+    clear
+    echo "copying special docker files..."
+    cp "$docker_location/bind9/volumes/config/named.conf" "$backup_location/docker/bind9/"
+    cp "$docker_location/bind9/volumes/records/example.com.db" "$backup_location/docker/bind9/"
+    cp "$docker_location/bind9/volumes/records/example.org.db" "$backup_location/docker/bind9/"
+
+    cp "$docker_location/dashy/volumes/config/conf.yml" "$backup_location/docker/dashy/"
+
+    cp -a "$docker_location/gitlab/volumes/data/backups" "$backup_location/docker/gitlab/"
+
+    cp "$docker_location/nextcloud/volumes/scripts/cron.sh" "$backup_location/docker/nextcloud/"
+
+    cp "$docker_location/nginx-proxy-manager/reverse_proxy.conf" "$backup_location/docker/nginx-proxy-manager/"
+
+    cp "$docker_location/librenms/volumes/oxidized/config/config" "$backup_location/docker/librenms/"
+    cp -r "$docker_location/librenms/volumes/oxidized/config/git-repos" "$backup_location/docker/librenms/"
+
+
+    cp -a "$docker_location/vaultwarden/volumes" "$backup_location/docker/vaultwarden/"
+}
+
+config_backup() {
+    clear
+    echo "copying config files..."
+    mkdir -p "$backup_location/configs/"
+    for i in $config_files; do
+        cp -a "$i" "$backup_location/configs/"
+    done
+}
+
+script_backup() {
+    clear
+    echo "copying scripts..."
+    mkdir -p "$backup_location/scripts/"
+    for i in "$scripts"/*; do
+        cp -a "$i" "$backup_location/scripts/"
+    done
+}
+
+service_backup() {
+    clear
+    echo "copying services..."
+    mkdir -p "$backup_location/services/"
+    for i in "$services"/*; do
+        cp -a "$i" "$backup_location/services/"
+    done
+}
+
+create_tar_file() {
+    clear
+    echo "creating tar file..."
+    rm -rf /opt/storage/smb/common/linux/dvd_backup_*
+    tar -cf $tar_file $backup_location
+    # not removing the backup location comes with security issues...
+    chmod 600 $backup_location
+    rm -rf $backup_location
+    chmod 600 $tar_file
+    chown admin:admin $tar_file
+}
+
+main

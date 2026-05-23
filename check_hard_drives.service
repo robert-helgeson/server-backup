@@ -1,0 +1,6 @@
+[Unit]
+Description=Check if any hard drive is disconnected and shut down if it is
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/check_hard_drives

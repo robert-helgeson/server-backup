@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ntfy "a task has finished"
